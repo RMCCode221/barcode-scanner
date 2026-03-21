@@ -1,134 +1,92 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Scanner Pro</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
-    <style>
-        body { font-family: sans-serif; text-align: center; margin: 0; padding: 15px; background: #f0f2f5; }
-        #scanner { width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden; }
-        #indicator { margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
-        .btn-1 { background: #2e7d32; } .btn-2 { background: #1565c0; }
-        #history { margin-top: 15px; font-size: 0.8rem; color: #666; }
-    </style>
-</head>
 <body>
-    <div id="scanner"></div>
-    <div id="indicator">READY TO SCAN</div>
-    <div class="btn-group">
-        <button class="btn-1" onclick="submit(1)">SELECT 1</button>
-        <button class="btn-2" onclick="submit(2)">SELECT 2</button>
+    <div id="setup-screen" style="padding: 50px 20px;">
+        <button id="activate-btn" onclick="initScanner()" style="background: #673ab7; padding: 30px; width: 100%; font-size: 1.5rem; color: white; border-radius: 15px; border: none; font-weight: bold;">
+            ACTIVATE SCANNER
+        </button>
+        <p style="margin-top: 15px; color: #666;">Tap to enable camera & audio</p>
     </div>
-    <div id="history"></div>
 
-<script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlfXo0hJPstzPYoB513OitmPGSfjUdQLWcqvWs0hnU5f5_nEVxZoMvxwJjCYZ8zh9M/exec"; // Ensure this is your NEW Deployment URL
-    let currentCode = null;
-
-    // Initialize Camera
-// Wrap the start in a slight delay to ensure the DOM is ready
-setTimeout(() => {
-    Quagga.init({
-       inputStream: {
-    name: "Live",
-    type: "LiveStream",
-    target: document.querySelector('#scanner'),
-    constraints: {
-        // Removing complex width/height to see if the basic feed returns
-        facingMode: "environment" 
-            }
-        },
-            area: { // Focus the scanner on the center 80% to save processing power
-                top: "10%", right: "10%", left: "10%", bottom: "10%"
-            }
-        },
-        locator: { patchSize: "medium", halfSample: true },
-        numOfWorkers: 2,
-        decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] },
-        locate: true
-    }, function(err) {
-        if (err) {
-            console.error(err);
-            document.getElementById('indicator').innerText = "CAMERA FAIL: " + err.name;
-            return;
-        }
-        console.log("Initialization finished. Ready to start");
-        Quagga.start();
-    });
-}, 500); // 0.5 second delay
-
-    Quagga.onDetected(data => {
-        currentCode = data.codeResult.code;
-        const displayCode = currentCode.slice(0, -1);
-        document.getElementById('indicator').innerText = "SCANNED: " + displayCode;
-        document.getElementById('indicator').style.background = "#e3f2fd";
-        // Play beep if you still have that function
-    });
-
-    function submit(val) {
-        if (!currentCode) return alert("Scan something first!");
+    <div id="scanner-container" style="display:none;">
+        <div id="scanner" style="width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden;"></div>
+        <div id="indicator" style="margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px;">READY</div>
         
-        const ind = document.getElementById('indicator');
-        ind.innerText = "CHECKING DATABASE...";
-        ind.style.background = "#eee";
+        <div class="btn-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button onclick="submit(1)" style="background: #2e7d32; padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold;">SELECT 1</button>
+            <button onclick="submit(2)" style="background: #1565c0; padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold;">SELECT 2</button>
+        </div>
+        <div id="history" style="margin-top: 15px; font-size: 0.9rem; color: #444;"></div>
+    </div>
 
-        // JSONP Request to bypass CORS blocks
-        const script = document.createElement('script');
-        script.src = `${SCRIPT_URL}?barcode=${currentCode}&selection=${val}&callback=handleResponse`;
-        document.body.appendChild(script);
-    }
+    <script>
+        const SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
+        let currentCode = null;
 
-    // THIS HANDLES THE INDICATORS YOU REQUESTED
-window.handleResponse = function(res) {
-    const ind = document.getElementById('indicator');
-    const hist = document.getElementById('history');
-    
-    let color = "white";
-    let text = "";
-    let historyHtml = "";
+        function initScanner() {
+            // Show scanner, hide start button
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('scanner-container').style.display = 'block';
 
-    if (res.newTotal > 2) {
-        // OVER LIMIT
-        color = "#F44336"; // RED
-        text = "LIMIT EXCEEDED! (Total: " + res.newTotal + ")";
-        historyHtml = `<span style="color:red">Customer has already bought ${res.previousTotal}. This purchase puts them at ${res.newTotal}!</span>`;
-    } 
-    else if (res.previousTotal > 0) {
-        // PREVIOUS PURCHASES EXIST BUT UNDER/AT LIMIT
-        color = "#FFEB3B"; // YELLOW
-        text = "PREVIOUS PURCHASE FOUND";
-        historyHtml = `Total now: ${res.newTotal}/2. <br>Last purchase at: ${res.lastTime}`;
-    } 
-    else {
-        // BRAND NEW
-        color = "#4CAF50"; // GREEN
-        text = "FIRST PURCHASE: SAVED";
-        historyHtml = `Total: ${res.newTotal}/2.`;
-    }
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#scanner'),
+                    constraints: {
+                        facingMode: "environment" // Simple constraint
+                    }
+                },
+                decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
+            }, function(err) {
+                if (err) {
+                    alert("Scanner Error: " + err.name);
+                    return;
+                }
+                Quagga.start();
+            });
+        }
 
-    ind.style.background = color;
-    ind.innerText = text;
-    hist.innerHTML = historyHtml;
+        Quagga.onDetected(data => {
+            if (currentCode !== data.codeResult.code) {
+                currentCode = data.codeResult.code;
+                document.getElementById('indicator').innerText = "SCANNED: " + currentCode.slice(0, -1);
+                document.getElementById('indicator').style.background = "#e3f2fd";
+                // Optional: Play a short beep here
+            }
+        });
 
-    setTimeout(() => {
-        ind.style.background = "white";
-        ind.innerText = "READY TO SCAN";
-        currentCode = null;
-    }, 4000); // 4 seconds so you can read the totals
-};
+        function submit(val) {
+            if (!currentCode) return alert("Scan a barcode first!");
+            const ind = document.getElementById('indicator');
+            ind.innerText = "CHECKING...";
 
-        ind.style.background = color;
-        ind.innerText = text;
+            const script = document.createElement('script');
+            script.src = `${SCRIPT_URL}?barcode=${currentCode}&selection=${val}&callback=handleResponse`;
+            document.body.appendChild(script);
+        }
 
-        // Reset to white after 3 seconds
-        setTimeout(() => {
-            ind.style.background = "white";
-            ind.innerText = "READY TO SCAN";
-            currentCode = null; // Clear code so you can scan the next one
-        }, 3000);
-    };
-</script>
+        window.handleResponse = function(res) {
+            const ind = document.getElementById('indicator');
+            const hist = document.getElementById('history');
+            
+            if (res.newTotal > 2) {
+                ind.style.background = "#F44336"; // RED
+                ind.innerText = "LIMIT EXCEEDED (" + res.newTotal + ")";
+                hist.innerHTML = `<b style="color:red">Already bought ${res.previousTotal}. Blocked.</b>`;
+            } else if (res.previousTotal > 0) {
+                ind.style.background = "#FFEB3B"; // YELLOW
+                ind.innerText = "PREVIOUS: TOTAL " + res.newTotal;
+                hist.innerHTML = `Last purchase: ${res.lastTime}`;
+            } else {
+                ind.style.background = "#4CAF50"; // GREEN
+                ind.innerText = "NEW: SAVED (" + res.newTotal + "/2)";
+                hist.innerHTML = "First time scanning this member.";
+            }
+
+            setTimeout(() => {
+                ind.style.background = "white";
+                ind.innerText = "READY";
+                currentCode = null;
+            }, 4000);
+        };
+    </script>
 </body>
-</html>
