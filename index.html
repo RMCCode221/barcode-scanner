@@ -24,7 +24,7 @@
     <div id="history"></div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxTP_3T_b33G9MZUunA4wgNUT_7vixNnPEuju-Jne0j8VETj-rZNYXn6BtbGb69Ujjz/exec"; // Ensure this is your NEW Deployment URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlfXo0hJPstzPYoB513OitmPGSfjUdQLWcqvWs0hnU5f5_nEVxZoMvxwJjCYZ8zh9M/exec"; // Ensure this is your NEW Deployment URL
     let currentCode = null;
 
     // Initialize Camera
@@ -55,26 +55,43 @@
     }
 
     // THIS HANDLES THE INDICATORS YOU REQUESTED
-    window.handleResponse = function(res) {
-        const ind = document.getElementById('indicator');
-        const hist = document.getElementById('history');
-        let color = "white";
-        let text = "";
+window.handleResponse = function(res) {
+    const ind = document.getElementById('indicator');
+    const hist = document.getElementById('history');
+    
+    let color = "white";
+    let text = "";
+    let historyHtml = "";
 
-        if (res.isNew) {
-            color = "#4CAF50"; // GREEN
-            text = "NEW SCAN SAVED";
-            hist.innerHTML = "";
-        } else {
-            if (res.prevSel == 1) {
-                color = "#FFEB3B"; // YELLOW
-                text = "ALREADY SCANNED (1)";
-            } else {
-                color = "#F44336"; // RED
-                text = "ALREADY SCANNED (2)";
-            }
-            hist.innerHTML = `<strong>Last Scan:</strong> ${res.prevTime}<br><strong>Prev Selection:</strong> ${res.prevSel}`;
-        }
+    if (res.newTotal > 2) {
+        // OVER LIMIT
+        color = "#F44336"; // RED
+        text = "LIMIT EXCEEDED! (Total: " + res.newTotal + ")";
+        historyHtml = `<span style="color:red">Customer has already bought ${res.previousTotal}. This purchase puts them at ${res.newTotal}!</span>`;
+    } 
+    else if (res.previousTotal > 0) {
+        // PREVIOUS PURCHASES EXIST BUT UNDER/AT LIMIT
+        color = "#FFEB3B"; // YELLOW
+        text = "PREVIOUS PURCHASE FOUND";
+        historyHtml = `Total now: ${res.newTotal}/2. <br>Last purchase at: ${res.lastTime}`;
+    } 
+    else {
+        // BRAND NEW
+        color = "#4CAF50"; // GREEN
+        text = "FIRST PURCHASE: SAVED";
+        historyHtml = `Total: ${res.newTotal}/2.`;
+    }
+
+    ind.style.background = color;
+    ind.innerText = text;
+    hist.innerHTML = historyHtml;
+
+    setTimeout(() => {
+        ind.style.background = "white";
+        ind.innerText = "READY TO SCAN";
+        currentCode = null;
+    }, 4000); // 4 seconds so you can read the totals
+};
 
         ind.style.background = color;
         ind.innerText = text;
