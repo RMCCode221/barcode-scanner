@@ -1,63 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scanner Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 15px; background: #f0f2f5; }
+        #scanner { width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden; }
+        #indicator { margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-1 { background: #2e7d32; } .btn-2 { background: #1565c0; }
+        #history { margin-top: 15px; font-size: 0.9rem; color: #666; }
+    </style>
+</head>
 <body>
-    <div id="setup-screen" style="padding: 50px 20px;">
-        <button id="activate-btn" onclick="initScanner()" style="background: #673ab7; padding: 30px; width: 100%; font-size: 1.5rem; color: white; border-radius: 15px; border: none; font-weight: bold;">
-            ACTIVATE SCANNER
-        </button>
-        <p style="margin-top: 15px; color: #666;">Tap to enable camera & audio</p>
+    <div id="scanner"></div>
+    <div id="indicator">READY TO SCAN</div>
+    <div class="btn-group">
+        <button class="btn-1" onclick="submit(1)">SELECT 1</button>
+        <button class="btn-2" onclick="submit(2)">SELECT 2</button>
     </div>
-
-    <div id="scanner-container" style="display:none;">
-        <div id="scanner" style="width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden;"></div>
-        <div id="indicator" style="margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px;">READY</div>
-        
-        <div class="btn-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button onclick="submit(1)" style="background: #2e7d32; padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold;">SELECT 1</button>
-            <button onclick="submit(2)" style="background: #1565c0; padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold;">SELECT 2</button>
-        </div>
-        <div id="history" style="margin-top: 15px; font-size: 0.9rem; color: #444;"></div>
-    </div>
+    <div id="history"></div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlfXo0hJPstzPYoB513OitmPGSfjUdQLWcqvWs0hnU5f5_nEVxZoMvxwJjCYZ8zh9M/exec"; 
+        const SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
         let currentCode = null;
 
-        function initScanner() {
-            // Show scanner, hide start button
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('scanner-container').style.display = 'block';
-
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: document.querySelector('#scanner'),
-                    constraints: {
-                        facingMode: "environment" // Simple constraint
-                    }
-                },
-                decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
-            }, function(err) {
-                if (err) {
-                    alert("Scanner Error: " + err.name);
-                    return;
-                }
-                Quagga.start();
-            });
-        }
+        Quagga.init({
+            inputStream: { 
+                name: "Live", 
+                type: "LiveStream", 
+                target: document.querySelector('#scanner'), 
+                constraints: { facingMode: "environment" } 
+            },
+            decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
+        }, (err) => { 
+            if (!err) Quagga.start(); 
+            else alert("Camera Init Error: " + err); 
+        });
 
         Quagga.onDetected(data => {
-            if (currentCode !== data.codeResult.code) {
-                currentCode = data.codeResult.code;
-                document.getElementById('indicator').innerText = "SCANNED: " + currentCode.slice(0, -1);
-                document.getElementById('indicator').style.background = "#e3f2fd";
-                // Optional: Play a short beep here
-            }
+            currentCode = data.codeResult.code;
+            document.getElementById('indicator').innerText = "SCANNED: " + currentCode.slice(0, -1);
+            document.getElementById('indicator').style.background = "#e3f2fd";
         });
 
         function submit(val) {
-            if (!currentCode) return alert("Scan a barcode first!");
+            if (!currentCode) return alert("Scan something first!");
             const ind = document.getElementById('indicator');
-            ind.innerText = "CHECKING...";
+            ind.innerText = "CHECKING DATABASE...";
 
             const script = document.createElement('script');
             script.src = `${SCRIPT_URL}?barcode=${currentCode}&selection=${val}&callback=handleResponse`;
@@ -84,9 +76,10 @@
 
             setTimeout(() => {
                 ind.style.background = "white";
-                ind.innerText = "READY";
+                ind.innerText = "READY TO SCAN";
                 currentCode = null;
             }, 4000);
         };
     </script>
 </body>
+</html>
