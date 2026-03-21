@@ -28,22 +28,38 @@
     let currentCode = null;
 
     // Initialize Camera
-Quagga.init({
-    inputStream: { 
-        name: "Live", 
-        type: "LiveStream", 
-        target: document.querySelector('#scanner'), 
-        constraints: { facingMode: "environment" } 
-    },
-    decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
-}, (err) => { 
-    if (err) {
-        // THIS WILL TELL US THE EXACT PROBLEM
-        alert("Camera Error: " + err.name + " - " + err.message);
-    } else {
+// Wrap the start in a slight delay to ensure the DOM is ready
+setTimeout(() => {
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scanner'),
+            constraints: {
+                // 'ideal' tells the phone exactly what we want, but allows fallback
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: "environment", 
+                focusMode: "continuous"
+            },
+            area: { // Focus the scanner on the center 80% to save processing power
+                top: "10%", right: "10%", left: "10%", bottom: "10%"
+            }
+        },
+        locator: { patchSize: "medium", halfSample: true },
+        numOfWorkers: 2,
+        decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] },
+        locate: true
+    }, function(err) {
+        if (err) {
+            console.error(err);
+            document.getElementById('indicator').innerText = "CAMERA FAIL: " + err.name;
+            return;
+        }
+        console.log("Initialization finished. Ready to start");
         Quagga.start();
-    }
-});
+    });
+}, 500); // 0.5 second delay
 
     Quagga.onDetected(data => {
         currentCode = data.codeResult.code;
