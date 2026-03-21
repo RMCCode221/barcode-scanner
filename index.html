@@ -31,17 +31,15 @@
 // Wrap the start in a slight delay to ensure the DOM is ready
 setTimeout(() => {
     Quagga.init({
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: document.querySelector('#scanner'),
-            constraints: {
-                // 'ideal' tells the phone exactly what we want, but allows fallback
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: "environment", 
-                focusMode: "continuous"
-            },
+       inputStream: {
+    name: "Live",
+    type: "LiveStream",
+    target: document.querySelector('#scanner'),
+    constraints: {
+        // Removing complex width/height to see if the basic feed returns
+        facingMode: "environment" 
+            }
+        },
             area: { // Focus the scanner on the center 80% to save processing power
                 top: "10%", right: "10%", left: "10%", bottom: "10%"
             }
