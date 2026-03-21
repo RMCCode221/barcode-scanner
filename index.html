@@ -23,44 +23,69 @@
     </div>
     <div id="history"></div>
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWc7TbqXp961rcKIv4gAodjY9dwYq9sx3C4e6IVhOO1ruppUDNcXXbvHpX7Rrrq38XuQ/exec"; 
-        let currentCode = null;
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVd0S_vxnHP827AH_UKtU2ADssJXwkijYmgQ3YomhthUC-cx_Uve00kReyWc4rfLIgKw/exec"; // Ensure this is your NEW Deployment URL
+    let currentCode = null;
 
-        Quagga.init({
-            inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#scanner'), constraints: { facingMode: "environment" } },
-            decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
-        }, (err) => { if (!err) Quagga.start(); else alert(err); });
+    // Initialize Camera
+    Quagga.init({
+        inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#scanner'), constraints: { facingMode: "environment" } },
+        decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
+    }, (err) => { if (!err) Quagga.start(); });
 
-        Quagga.onDetected(data => {
-            currentCode = data.codeResult.code;
-            document.getElementById('indicator').innerText = "SCANNED: " + currentCode.slice(0, -1);
-            document.getElementById('indicator').style.background = "#e3f2fd";
-        });
+    Quagga.onDetected(data => {
+        currentCode = data.codeResult.code;
+        const displayCode = currentCode.slice(0, -1);
+        document.getElementById('indicator').innerText = "SCANNED: " + displayCode;
+        document.getElementById('indicator').style.background = "#e3f2fd";
+        // Play beep if you still have that function
+    });
 
-        async function submit(val) {
-            if (!currentCode) return alert("Scan something first!");
-            const ind = document.getElementById('indicator');
-            ind.innerText = "SENDING...";
+    function submit(val) {
+        if (!currentCode) return alert("Scan something first!");
+        
+        const ind = document.getElementById('indicator');
+        ind.innerText = "CHECKING DATABASE...";
+        ind.style.background = "#eee";
 
-            const resp = await fetch(`${SCRIPT_URL}?barcode=${currentCode}&selection=${val}`);
-            const res = await resp.json();
+        // JSONP Request to bypass CORS blocks
+        const script = document.createElement('script');
+        script.src = `${SCRIPT_URL}?barcode=${currentCode}&selection=${val}&callback=handleResponse`;
+        document.body.appendChild(script);
+    }
 
-            if (res.isNew) {
-                updateUI("green", "SAVED NEW", "");
+    // THIS HANDLES THE INDICATORS YOU REQUESTED
+    window.handleResponse = function(res) {
+        const ind = document.getElementById('indicator');
+        const hist = document.getElementById('history');
+        let color = "white";
+        let text = "";
+
+        if (res.isNew) {
+            color = "#4CAF50"; // GREEN
+            text = "NEW SCAN SAVED";
+            hist.innerHTML = "";
+        } else {
+            if (res.prevSel == 1) {
+                color = "#FFEB3B"; // YELLOW
+                text = "ALREADY SCANNED (1)";
             } else {
-                const color = res.prevSel == 1 ? "yellow" : "red";
-                updateUI(color, "DUPLICATE", `Last: ${res.prevTime} (Choice: ${res.prevSel})`);
+                color = "#F44336"; // RED
+                text = "ALREADY SCANNED (2)";
             }
-            currentCode = null;
+            hist.innerHTML = `<strong>Last Scan:</strong> ${res.prevTime}<br><strong>Prev Selection:</strong> ${res.prevSel}`;
         }
 
-        function updateUI(color, text, hist) {
-            const ind = document.getElementById('indicator');
-            ind.style.background = color; ind.innerText = text;
-            document.getElementById('history').innerHTML = hist;
-            setTimeout(() => { ind.style.background = "white"; ind.innerText = "READY"; }, 3000);
-        }
-    </script>
+        ind.style.background = color;
+        ind.innerText = text;
+
+        // Reset to white after 3 seconds
+        setTimeout(() => {
+            ind.style.background = "white";
+            ind.innerText = "READY TO SCAN";
+            currentCode = null; // Clear code so you can scan the next one
+        }, 3000);
+    };
+</script>
 </body>
 </html>
