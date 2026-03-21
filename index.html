@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scanner Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 15px; background: #f0f2f5; }
+        #scanner { width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden; }
+        #indicator { margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-1 { background: #2e7d32; } .btn-2 { background: #1565c0; }
+        #history { margin-top: 15px; font-size: 0.8rem; color: #666; }
+    </style>
+</head>
+<body>
+    <div id="scanner"></div>
+    <div id="indicator">READY TO SCAN</div>
+    <div class="btn-group">
+        <button class="btn-1" onclick="submit(1)">SELECT 1</button>
+        <button class="btn-2" onclick="submit(2)">SELECT 2</button>
+    </div>
+    <div id="history"></div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWc7TbqXp961rcKIv4gAodjY9dwYq9sx3C4e6IVhOO1ruppUDNcXXbvHpX7Rrrq38XuQ/exec"; 
+        let currentCode = null;
+
+        Quagga.init({
+            inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#scanner'), constraints: { facingMode: "environment" } },
+            decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
+        }, (err) => { if (!err) Quagga.start(); else alert(err); });
+
+        Quagga.onDetected(data => {
+            currentCode = data.codeResult.code;
+            document.getElementById('indicator').innerText = "SCANNED: " + currentCode.slice(0, -1);
+            document.getElementById('indicator').style.background = "#e3f2fd";
+        });
+
+        async function submit(val) {
+            if (!currentCode) return alert("Scan something first!");
+            const ind = document.getElementById('indicator');
+            ind.innerText = "SENDING...";
+
+            const resp = await fetch(`${SCRIPT_URL}?barcode=${currentCode}&selection=${val}`);
+            const res = await resp.json();
+
+            if (res.isNew) {
+                updateUI("green", "SAVED NEW", "");
+            } else {
+                const color = res.prevSel == 1 ? "yellow" : "red";
+                updateUI(color, "DUPLICATE", `Last: ${res.prevTime} (Choice: ${res.prevSel})`);
+            }
+            currentCode = null;
+        }
+
+        function updateUI(color, text, hist) {
+            const ind = document.getElementById('indicator');
+            ind.style.background = color; ind.innerText = text;
+            document.getElementById('history').innerHTML = hist;
+            setTimeout(() => { ind.style.background = "white"; ind.innerText = "READY"; }, 3000);
+        }
+    </script>
+</body>
+</html>
