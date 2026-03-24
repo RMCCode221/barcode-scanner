@@ -1,3 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scanner Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 15px; background: #f0f2f5; }
+        #scanner { width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden; }
+        #indicator { margin: 15px 0; padding: 20px; font-weight: bold; background: white; border-radius: 10px; border: 2px solid #ddd; min-height: 30px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 20px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-1 { background: #2e7d32; } .btn-2 { background: #1565c0; }
+        #history { margin-top: 15px; font-size: 0.9rem; color: #666; }
+    </style>
+</head>
+    
 <div id="scanner"></div>
 <div id="indicator">READY TO SCAN</div>
 
